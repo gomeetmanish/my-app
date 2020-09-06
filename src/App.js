@@ -1,51 +1,72 @@
 import React from 'react';
 import './App.css';
 
-const initialStories = [
-	{
-		title: 'React',
-		url: 'https://reactjs.org/',
-		author: 'Manish',
-		num_comments: 3,
-		points: 4,
-		objectID: 0,
-	},
-	{
-		title: 'Redux',
-		url: 'https://reactjs.org/',
-		author: 'Kumar',
-		num_comments: 2,
-		points: 5,
-		objectID: 1,
-	},
-	{
-		title: 'Javascript',
-		url: 'https://reactjs.org/',
-		author: 'Champak',
-		num_comments: 8,
-		points: 3,
-		objectID: 2,
-	},
-	{
-		title: 'Angular',
-		url: 'https://reactjs.org/',
-		author: 'Borah',
-		num_comments: 7,
-		points: 2,
-		objectID: 4,
-	},
-];
-
 const App = () => {
+	const initialStories = [
+		{
+			title: 'React',
+			url: 'https://reactjs.org/',
+			author: 'Manish',
+			num_comments: 3,
+			points: 4,
+			objectID: 0,
+		},
+		{
+			title: 'Redux',
+			url: 'https://reactjs.org/',
+			author: 'Kumar',
+			num_comments: 2,
+			points: 5,
+			objectID: 1,
+		},
+		{
+			title: 'Javascript',
+			url: 'https://reactjs.org/',
+			author: 'Champak',
+			num_comments: 8,
+			points: 3,
+			objectID: 2,
+		},
+		{
+			title: 'Angular',
+			url: 'https://reactjs.org/',
+			author: 'Borah',
+			num_comments: 7,
+			points: 2,
+			objectID: 4,
+		},
+	];
+
 	const [searchTerm, setSearchTerm] = React.useState(
 		localStorage.getItem('search') || '',
 	);
+	const [stories, setStories] = React.useState([]);
+	const [isLoading, setIsLoading] = React.useState(false);
+	const [isError, setIsError] = React.useState(false);
 
-	const [stories, setStories] = React.useState(initialStories);
+	React.useEffect(() => {
+		setIsLoading(true);
+		getAsyncStories()
+			.then((result) => {
+				setStories(result.data.stories);
+				setIsLoading(false);
+			})
+			.catch(function () {
+				return setIsError(true);
+			});
+	}, []);
 
 	React.useEffect(() => {
 		localStorage.setItem('search', searchTerm);
 	}, [searchTerm]);
+
+	function getAsyncStories() {
+		return new Promise(function (resolve) {
+			return setTimeout(function () {
+				return resolve({ data: { stories: initialStories } });
+			}, 1000);
+		});
+	}
 
 	const handleRemoveStory = (item) => {
 		const newStories = stories.filter(
@@ -129,7 +150,13 @@ const App = () => {
 			>
 				<strong>Search:</strong>
 			</InputWithLabel>
-			<List list={searchedStories} onRemoveItem={handleRemoveStory} />
+			<hr />
+			{isError && <p>Something went wrong...</p>}
+			{isLoading ? (
+				<p>Loading...</p>
+			) : (
+				<List list={searchedStories} onRemoveItem={handleRemoveStory} />
+			)}
 		</>
 	);
 };
