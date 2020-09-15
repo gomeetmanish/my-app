@@ -1,4 +1,5 @@
 import React from 'react';
+import axios from 'axios';
 import './App.css';
 
 const storiesReducer = (state, action) => {
@@ -37,41 +38,6 @@ const storiesReducer = (state, action) => {
 const API_ENDPOINT = 'https://hn.algolia.com/api/v1/search?query=';
 
 const App = () => {
-	const initialStories = [
-		{
-			title: 'React',
-			url: 'https://reactjs.org/',
-			author: 'Manish',
-			num_comments: 3,
-			points: 4,
-			objectID: 0,
-		},
-		{
-			title: 'Redux',
-			url: 'https://reactjs.org/',
-			author: 'Kumar',
-			num_comments: 2,
-			points: 5,
-			objectID: 1,
-		},
-		{
-			title: 'Javascript',
-			url: 'https://reactjs.org/',
-			author: 'Champak',
-			num_comments: 8,
-			points: 3,
-			objectID: 2,
-		},
-		{
-			title: 'Angular',
-			url: 'https://reactjs.org/',
-			author: 'Borah',
-			num_comments: 7,
-			points: 2,
-			objectID: 4,
-		},
-	];
-
 	const [searchTerm, setSearchTerm] = React.useState(
 		localStorage.getItem('search') || '',
 	);
@@ -80,38 +46,33 @@ const App = () => {
 		isLoading: false,
 		isError: false,
 	});
+	const [url, setUrl] = React.useState(`${API_ENDPOINT}${searchTerm}`);
 
-	React.useEffect(() => {
+	const handleFetchStories = React.useCallback(async () => {
 		dispatchStories({
 			type: 'STORIES_FETCH_INIT',
 		});
 
-		fetch(`${API_ENDPOINT}react`)
-			.then((response) => response.json())
-			.then((result) => {
-				return dispatchStories({
-					type: 'STORIES_FETCH_SUCCESS',
-					payload: result.hits,
-				});
-			})
-			.catch(function () {
-				return dispatchStories({
-					type: 'STORIES_FETCH_FAILURE',
-				});
+		try {
+			const result = await axios.get(url);
+			dispatchStories({
+				type: 'STORIES_FETCH_SUCCESS',
+				payload: result.data.hits,
 			});
-	}, []);
+		} catch {
+			dispatchStories({
+				type: 'STORIES_FETCH_FAILURE',
+			});
+		}
+	}, [url]);
+
+	React.useEffect(() => {
+		handleFetchStories();
+	}, [handleFetchStories]);
 
 	React.useEffect(() => {
 		localStorage.setItem('search', searchTerm);
 	}, [searchTerm]);
-
-	function getAsyncStories() {
-		return new Promise(function (resolve) {
-			return setTimeout(function () {
-				return resolve({ data: { stories: initialStories } });
-			}, 1000);
-		});
-	}
 
 	const handleRemoveStory = (item) => {
 		dispatchStories({
@@ -120,13 +81,13 @@ const App = () => {
 		});
 	};
 
-	const handleSearch = (ev) => {
+	const handleSearchInput = (ev) => {
 		setSearchTerm(ev.target.value);
 	};
 
-	const searchedStories = stories.data.filter((story) =>
-		story.title.toLowerCase().includes(searchTerm.toLowerCase()),
-	);
+	const handleSearchSubmit = () => {
+		setUrl(`${API_ENDPOINT}${searchTerm}`);
+	};
 
 	const Item = ({ onRemoveItem, item }) => {
 		const { url, title, author, num_comments, points } = item;
@@ -184,23 +145,42 @@ const App = () => {
 		);
 	};
 
+	const SearchFormComponent = ({
+		onSearchInput,
+		onSearchSubmit,
+		searchTerm,
+	}) => {
+		return (
+			<form onSubmit={onSearchSubmit}>
+				<InputWithLabel
+					id='search'
+					value={searchTerm}
+					onInputChange={onSearchInput}
+					isFocused
+				>
+					<strong>Search:</strong>
+				</InputWithLabel>
+				<button type='submit' disabled={!searchTerm}>
+					Submit
+				</button>
+			</form>
+		);
+	};
+
 	return (
 		<>
 			<h1>My Hacker Stories</h1>
-			<InputWithLabel
-				id='search'
-				value={searchTerm}
-				onInputChange={handleSearch}
-				isFocused
-			>
-				<strong>Search:</strong>
-			</InputWithLabel>
+			<SearchFormComponent
+				onSearchInput={handleSearchInput}
+				onSearchSubmit={handleSearchSubmit}
+				searchTerm={searchTerm}
+			/>
 			<hr />
 			{stories.isError && <p>Something went wrong...</p>}
 			{stories.isLoading ? (
 				<p>Loading...</p>
 			) : (
-				<List list={searchedStories} onRemoveItem={handleRemoveStory} />
+				<List list={stories.data} onRemoveItem={handleRemoveStory} />
 			)}
 		</>
 	);
